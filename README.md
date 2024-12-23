@@ -27,7 +27,7 @@ A web-based health monitoring system that analyzes real-time facial video stream
 - RESTful API integration
 
 ## Screenshots
-[Add screenshots or GIFs showing the interface in action]
+
 
 ## Quick Start
 
