@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Camera preview -->
+    <item name="texture_view" type="id"/>
+
+    <!-- Data container -->
+    <item name="data_container" type="id"/>
+
+    <!-- Health data IDs -->
+    <item name="tv_spo2" type="id"/>
+    <item name="tv_age" type="id"/>
+    <item name="tv_gender" type="id"/>
+    <item name="tv_blood_pressure" type="id"/>
+    <item name="tv_respiratory" type="id"/>
+</resources>
