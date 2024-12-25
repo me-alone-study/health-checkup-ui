@@ -2,6 +2,7 @@ package com.example.tjy;
 
 import android.Manifest;
 import android.app.Activity;
+import android.app.ProgressDialog;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -17,7 +18,8 @@ public class MainActivity extends Activity {
     private String[] permissions = {
             Manifest.permission.CAMERA,
             Manifest.permission.READ_EXTERNAL_STORAGE,
-            Manifest.permission.WRITE_EXTERNAL_STORAGE
+            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+            Manifest.permission.RECORD_AUDIO  // 添加这一行
     };
 
     @Override
@@ -76,4 +78,5 @@ public class MainActivity extends Activity {
         startActivity(intent);
         finish();
     }
+
 }
