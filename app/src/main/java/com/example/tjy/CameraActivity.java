@@ -1,10 +1,24 @@
 package com.example.tjy;
 
+import okhttp3.MediaType;
+import okhttp3.MultipartBody;
+import okhttp3.OkHttpClient;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
+
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.File;
+import java.io.IOException;
+
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.graphics.ImageFormat;
 import android.graphics.SurfaceTexture;
+import android.graphics.drawable.AnimationDrawable;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCaptureSession;
 import android.hardware.camera2.CameraCharacteristics;
@@ -22,10 +36,14 @@ import android.util.Log;
 import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import android.content.res.Configuration;
+import androidx.constraintlayout.widget.ConstraintLayout;
+import androidx.constraintlayout.widget.ConstraintSet;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +52,7 @@ import java.util.List;
 import java.util.ArrayList;
 
 import java.io.IOException;
+import java.util.concurrent.TimeUnit;
 
 public class CameraActivity extends Activity {
     private static final String TAG = "CameraActivity";
@@ -46,8 +65,8 @@ public class CameraActivity extends Activity {
     private HandlerThread mBackgroundThread;
     private Size mPreviewSize;
     private ImageReader mImageReader;
-    private static final int MAX_PREVIEW_WIDTH = 1920;
-    private static final int MAX_PREVIEW_HEIGHT = 1080;
+    private int MAX_PREVIEW_WIDTH = 1920;
+    private int MAX_PREVIEW_HEIGHT = 1080;
     private CaptureRequest.Builder mCaptureRequestBuilder;
     private Handler mHandler;
     private ProgressDialog mProgressDialog;
@@ -58,6 +77,11 @@ public class CameraActivity extends Activity {
     private TextView tvGender;
     private TextView tvBloodPressure;
     private TextView tvRespiratory;
+    private TextView tvHeartRate;
+    private View mRecordingIndicator;
+    private View mRecordingDot;
+    private AnimationDrawable mRecordingAnimation;
+    // 添加到类成员变量中
 
     //录制视频
     private static final int VIDEO_DURATION = 20000; // 20秒
@@ -99,7 +123,6 @@ public class CameraActivity extends Activity {
         }
     };
 
-
     private final CameraDevice.StateCallback mStateCallback = new CameraDevice.StateCallback() {
         @Override
         public void onOpened(@NonNull CameraDevice cameraDevice) {
@@ -125,10 +148,45 @@ public class CameraActivity extends Activity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
+        setContentView(R.layout.activity_camera);
         mTextureView = findViewById(R.id.texture_view);
+//        adjustViewsForScreenDensity();
         initViews();
         findViewById(R.id.btn_start).setOnClickListener(v -> startRecording());
+    }
+
+
+//    // 适应屏幕
+//    private void adjustViewsForScreenDensity() {
+//        float density = getResources().getDisplayMetrics().density;
+//        if (density >= 3.0) { // xxhdpi
+//            MAX_PREVIEW_WIDTH = 2560;
+//            MAX_PREVIEW_HEIGHT = 1440;
+//        } else if (density >= 2.0) { // xhdpi
+//            MAX_PREVIEW_WIDTH = 1920;
+//            MAX_PREVIEW_HEIGHT = 1080;
+//        }
+//    }
+
+    // 屏幕旋转处理
+    @Override
+    public void onConfigurationChanged(@NonNull Configuration newConfig) {
+        super.onConfigurationChanged(newConfig);
+        adjustLayoutForOrientation(newConfig.orientation);
+    }
+
+    private void adjustLayoutForOrientation(int orientation) {
+        ConstraintLayout rootLayout = findViewById(R.id.root_layout);
+        ConstraintSet constraintSet = new ConstraintSet();
+        constraintSet.clone(rootLayout);
+
+        if (orientation == Configuration.ORIENTATION_LANDSCAPE) {
+            constraintSet.setGuidelinePercent(R.id.guideline, 0.7f);
+        } else {
+            constraintSet.setGuidelinePercent(R.id.guideline, 0.6f);
+        }
+
+        constraintSet.applyTo(rootLayout);
     }
 
     @Override
@@ -179,7 +237,7 @@ public class CameraActivity extends Activity {
         try {
             String cameraId = getBackCameraId(manager);
             if (cameraId == null) {
-                Toast.makeText(this, "没有找到后置摄像头", Toast.LENGTH_SHORT).show();
+                Log.d(TAG, "没有找到后置摄像头");
                 finish();
                 return;
             }
@@ -203,10 +261,12 @@ public class CameraActivity extends Activity {
 
             manager.openCamera(cameraId, mStateCallback, mBackgroundHandler);
         } catch (CameraAccessException e) {
-            Toast.makeText(this, "无法访问相机", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "无法访问相机", Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "无法访问相机");
             finish();
         } catch (SecurityException e) {
-            Toast.makeText(this, "没有相机权限", Toast.LENGTH_SHORT).show();
+            //Toast.makeText(this, "没有相机权限", Toast.LENGTH_SHORT).show();
+            Log.d(TAG, "没有相机权限");
             finish();
         }
     }
@@ -288,8 +348,10 @@ public class CameraActivity extends Activity {
 
                         @Override
                         public void onConfigureFailed(@NonNull CameraCaptureSession cameraCaptureSession) {
-                            Toast.makeText(CameraActivity.this, "配置失败",
-                                    Toast.LENGTH_SHORT).show();
+                            //Toast.makeText(CameraActivity.this, "配置失败",
+                            //Toast.LENGTH_SHORT).show();
+                            Log.d(TAG, "配置失败");
+
                         }
                     }, null
             );
@@ -321,29 +383,41 @@ public class CameraActivity extends Activity {
         // 相机预览
         mTextureView = findViewById(R.id.texture_view);
 
+        // 录制指示器
+        mRecordingIndicator = findViewById(R.id.recording_indicator);
+        mRecordingDot = findViewById(R.id.recording_dot);
+        mRecordingAnimation = (AnimationDrawable) mRecordingDot.getBackground();
+
         // 初始化健康数据显示
         tvSpo2 = findViewById(R.id.tv_spo2);
+        tvBloodPressure = findViewById(R.id.tv_blood_pressure);
+        tvHeartRate = findViewById(R.id.tv_heart_rate);
+        tvRespiratory = findViewById(R.id.tv_respiratory);
+
+        // 基本信息显示
         tvAge = findViewById(R.id.tv_age);
         tvGender = findViewById(R.id.tv_gender);
-        tvBloodPressure = findViewById(R.id.tv_blood_pressure);
-        tvRespiratory = findViewById(R.id.tv_respiratory);
+
+        // 设置按钮点击事件
+        findViewById(R.id.btn_start).setOnClickListener(v -> startRecording());
+        findViewById(R.id.btn_stop).setOnClickListener(v -> stopRecording());
     }
 
     // 更新健康数据的方法示例
-    private void updateHealthData(String spo2, String age, String gender, String bloodPressure, String respiratory) {
+    private void updateHealthData(String spo2, String age, String gender,
+                                  String bloodPressure, String respiratory, String heartRate) {
         tvSpo2.setText(spo2);
         tvAge.setText(age);
         tvGender.setText(gender);
         tvBloodPressure.setText(bloodPressure);
         tvRespiratory.setText(respiratory);
+        tvHeartRate.setText(heartRate);
     }
 
     private void startRecording() {
         if (!isRecording) {
             try {
                 mVideoFilePath = getExternalFilesDir(null) + "/health_video.mp4";
-                String path = getExternalFilesDir(null).getAbsolutePath();
-                Log.d("CameraActivity", "storagePathFile: " + path);
                 mMediaRecorder = new MediaRecorder();
 
                 // 移除音频源设置，只设置视频源
@@ -354,13 +428,23 @@ public class CameraActivity extends Activity {
                 mMediaRecorder.setVideoFrameRate(30);
                 mMediaRecorder.setVideoSize(mPreviewSize.getWidth(), mPreviewSize.getHeight());
                 mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.H264);
-                // 移除音频编码器设置
+
+
+                // 获取相机传感器方向
+                CameraManager manager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+                CameraCharacteristics characteristics = manager.getCameraCharacteristics(mCameraDevice.getId());
+                int sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+
+                //设置视频方向
+                mMediaRecorder.setOrientationHint(90);
+
 
                 try {
                     mMediaRecorder.prepare();
                 } catch (IOException e) {
                     Log.e(TAG, "MediaRecorder prepare failed", e);
-                    Toast.makeText(this, "录制准备失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "录制准备失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "录制准备失败: " + e.getMessage());
                     mMediaRecorder.release();
                     mMediaRecorder = null;
                     return;
@@ -369,7 +453,8 @@ public class CameraActivity extends Activity {
                 SurfaceTexture surfaceTexture = mTextureView.getSurfaceTexture();
                 if (surfaceTexture == null) {
                     Log.e(TAG, "Camera preview not ready");
-                    Toast.makeText(this, "相机预览未就绪", Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "相机预览未就绪", Toast.LENGTH_SHORT).show();
+                    Log.d(TAG, "相机预览未就绪");
                     mMediaRecorder.release();
                     mMediaRecorder = null;
                     return;
@@ -394,6 +479,7 @@ public class CameraActivity extends Activity {
                                                 mCaptureRequestBuilder.build(), null, null);
                                         mMediaRecorder.start();
                                         isRecording = true;
+                                        showRecordingStatus();  // 添加这行
 
                                         new Handler().postDelayed(() -> {
                                             if (isRecording) {
@@ -403,30 +489,39 @@ public class CameraActivity extends Activity {
 
                                     } catch (CameraAccessException e) {
                                         Log.e(TAG, "Failed to start camera preview", e);
-                                        Toast.makeText(CameraActivity.this,
-                                                "开启预览失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        //Toast.makeText(CameraActivity.this,
+                                        //"开启预览失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                                        Log.e(TAG, "开启预览失败: " + e.getMessage());
                                         releaseMediaRecorder();
                                     }
                                 }
 
                                 @Override
                                 public void onConfigureFailed(@NonNull CameraCaptureSession session) {
-                                    Toast.makeText(CameraActivity.this,
-                                            "配置失败", Toast.LENGTH_SHORT).show();
+                                    //Toast.makeText(CameraActivity.this,
+                                    //"配置失败", Toast.LENGTH_SHORT).show();
+                                    Log.d(TAG, "配置失败");
                                     releaseMediaRecorder();
                                 }
                             }, null);
                 } catch (CameraAccessException e) {
                     Log.e(TAG, "Failed to start recording", e);
-                    Toast.makeText(this, "录制设置失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    //Toast.makeText(this, "录制设置失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "录制设置失败: " + e.getMessage());
                     releaseMediaRecorder();
                 }
             } catch (Exception e) {
                 Log.e(TAG, "Recording failed", e);
-                Toast.makeText(this, "录制失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                //Toast.makeText(this, "录制失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                Log.e(TAG, "录制失败: " + e.getMessage());
                 releaseMediaRecorder();
             }
         }
+    }
+
+    private void showRecordingStatus() {
+        mRecordingIndicator.setVisibility(View.VISIBLE);
+        mRecordingAnimation.start();
     }
 
     private void releaseMediaRecorder() {
@@ -454,8 +549,14 @@ public class CameraActivity extends Activity {
             mMediaRecorder.stop();
             mMediaRecorder.reset();
             isRecording = false;
+            hideRecordingStatus();  // 添加这行
             startAnalyze();
         }
+    }
+
+    private void hideRecordingStatus() {
+        mRecordingAnimation.stop();
+        mRecordingIndicator.setVisibility(View.GONE);
     }
 
     private void showProgressDialog() {
@@ -481,13 +582,16 @@ public class CameraActivity extends Activity {
         String gender;
         String bloodPressure;
         String respiratory;
+        String heartRate;
 
-        AnalysisResult(String spo2, String age, String gender, String bloodPressure, String respiratory) {
+        AnalysisResult(String spo2, String age, String gender, String bloodPressure,
+                       String respiratory, String heartRate) {  // 修改构造函数
             this.spo2 = spo2;
             this.age = age;
             this.gender = gender;
             this.bloodPressure = bloodPressure;
             this.respiratory = respiratory;
+            this.heartRate = heartRate;  // 初始化心率
         }
     }
 
@@ -501,7 +605,8 @@ public class CameraActivity extends Activity {
                     "25岁",
                     "男",
                     "120/80 mmHg",
-                    "18次/分钟"
+                    "18次/分钟",
+                    "75次/分钟"
             );
         } catch (InterruptedException e) {
             e.printStackTrace();
@@ -512,36 +617,142 @@ public class CameraActivity extends Activity {
     private void startAnalyze() {
         runOnUiThread(() -> {
             showProgressDialog();
+            uploadVideo(mVideoFilePath);
         });
 
-        // 在后台线程中调用 RKNN 模块进行视频分析
-        new Thread(() -> {
-            // 模拟调用 RKNN 模块的接口，获取分析结果
-            // TODO: 实际项目中，这里需要替换为真实的 RKNN 接口调用
-            AnalysisResult result = analyzeVideoWithRKNN(mVideoFilePath);
+//        // 在后台线程中调用 RKNN 模块进行视频分析
+//        new Thread(() -> {
+//            // 模拟调用 RKNN 模块的接口，获取分析结果
+//            // TODO: 实际项目中，这里需要替换为真实的 RKNN 接口调用
+//            AnalysisResult result = analyzeVideoWithRKNN(mVideoFilePath);
+//
+//            // 在 UI 线程更新结果
+//            runOnUiThread(() -> {
+//                if (result != null) {
+//                    updateHealthData(
+//                            result.spo2,
+//                            result.age,
+//                            result.gender,
+//                            result.bloodPressure,
+//                            result.respiratory,
+//                            result.heartRate
+//                    );
+//                } else {
+//                    // 分析失败的处理
+//                    updateHealthData(
+//                            "分析失败",
+//                            "分析失败",
+//                            "分析失败",
+//                            "分析失败",
+//                            "分析失败",
+//                            "分析失败"
+//                    );
+//                }
+//                dismissProgressDialog();
+//            });
+//        }).start();
+    }
 
-            // 在 UI 线程更新结果
-            runOnUiThread(() -> {
-                if (result != null) {
-                    updateHealthData(
-                            result.spo2,
-                            result.age,
-                            result.gender,
-                            result.bloodPressure,
-                            result.respiratory
-                    );
+    private void uploadVideo(String filePath) {
+        File file = new File(filePath);
+        RequestBody requestBody = new MultipartBody.Builder()
+                .setType(MultipartBody.FORM)
+                .addFormDataPart("video", file.getName(),
+                        RequestBody.create(MediaType.parse("video/mp4"), file))
+                .build();
+
+        Request request = new Request.Builder()
+                .url("http://183.238.1.242:50000/upload")
+                .post(requestBody)
+                .build();
+
+        OkHttpClient client = new OkHttpClient.Builder()
+                .connectTimeout(300, TimeUnit.SECONDS)    // 连接超时
+                .writeTimeout(300, TimeUnit.SECONDS)      // 写入超时
+                .readTimeout(300, TimeUnit.SECONDS)       // 读取超时
+                .retryOnConnectionFailure(true)          // 启用失败重试
+                .build();
+        client.newCall(request).enqueue(new okhttp3.Callback() {
+            @Override
+            public void onFailure(okhttp3.Call call, IOException e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    //Toast.makeText(CameraActivity.this,
+                    //"上传失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "上传失败: " + e.getMessage());
+                    dismissProgressDialog();
+                });
+            }
+
+            @Override
+            public void onResponse(okhttp3.Call call, Response response) throws IOException {
+                if (response.isSuccessful()) {
+                    String responseData = response.body().string();
+                    try {
+                        handleUploadResponse(responseData);
+                    } catch (JSONException e) {
+                        e.printStackTrace();
+                        runOnUiThread(() -> {
+                            //Toast.makeText(CameraActivity.this,
+                            //"解析结果失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                            Log.e(TAG, "解析结果失败: " + e.getMessage());
+                            dismissProgressDialog();
+                        });
+                    }
                 } else {
-                    // 分析失败的处理
-                    updateHealthData(
-                            "分析失败",
-                            "分析失败",
-                            "分析失败",
-                            "分析失败",
-                            "分析失败"
-                    );
+                    runOnUiThread(() -> {
+                        //Toast.makeText(CameraActivity.this,
+                        //"上传失败: " + response.message(), Toast.LENGTH_SHORT).show();
+                        Log.e(TAG, "上传失败: " + response.message());
+                        dismissProgressDialog();
+                    });
                 }
+            }
+        });
+    }
+
+    private void handleUploadResponse(String responseData) throws JSONException {
+        Log.d(TAG, "收到服务器响应数据: " + responseData);
+        JSONObject jsonObject = new JSONObject(responseData);
+        if (jsonObject.getString("status").equals("success")) {
+            JSONObject data = jsonObject.getJSONObject("data");
+
+            // 解析血氧饱和度
+            String spo2 = String.format("%.1f%%", data.getDouble("spo2"));
+
+            // 解析年龄和年龄组
+            String age = data.getInt("age") + "岁 (" + data.getString("age_group") + ")";
+
+            // 解析性别
+            String gender = data.getString("gender").equals("Male") ? "男" : "女";
+
+            // 解析血压
+            JSONObject bp = data.getJSONObject("blood_pressure");
+            String bloodPressure = String.format("%d/%d mmHg",
+                    bp.getInt("sbp"), bp.getInt("dbp"));
+
+            // 解析呼吸率
+            JSONObject respirationObj = data.getJSONObject("respiration");
+            String respiratory = String.format("%.0f 次/分钟", respirationObj.getDouble("rate"));
+
+            // 解析心率
+            JSONObject heartRate = data.getJSONObject("heart_rate");
+            String heartRateStr = String.format("%.0f 次/分钟", heartRate.getDouble("rate"));
+
+            runOnUiThread(() -> {
+                updateHealthData(spo2, age, gender, bloodPressure, respiratory, heartRateStr);
                 dismissProgressDialog();
             });
-        }).start();
+        } else {
+            Log.d(TAG, "GetResponseDATAAAAAAAA: " + responseData);
+
+            String errorMessage = jsonObject.getString("message");
+            runOnUiThread(() -> {
+                Log.e(TAG, "上传失败: " + errorMessage);
+                dismissProgressDialog();
+                updateHealthData("分析失败", "分析失败", "分析失败",
+                        "分析失败", "分析失败", "分析失败");
+            });
+        }
     }
 }

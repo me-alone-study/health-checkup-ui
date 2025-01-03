@@ -13,6 +13,8 @@ import androidx.annotation.NonNull;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
 
+import java.io.File;
+
 public class MainActivity extends Activity {
     private static final int PERMISSION_REQUEST_CODE = 123;
     private String[] permissions = {
@@ -24,10 +26,23 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
-        checkPermissions();
+        try {
+            super.onCreate(savedInstanceState);
+            getApplication().setTheme(R.style.AppTheme);
+            setContentView(R.layout.activity_main);
+            setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE);
+            checkPermissions();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void fixStoragePermission() {
+        File appDir = getExternalFilesDir(null);
+        if (appDir != null) {
+            appDir.setReadable(true, false);
+            appDir.setExecutable(true, false);
+        }
     }
 
     private void checkPermissions() {
@@ -74,9 +89,23 @@ public class MainActivity extends Activity {
     }
 
     private void startCamera() {
+        if (!allPermissionsGranted()) {
+            // 重新检查权限
+            checkPermissions();
+            return;
+        }
         Intent intent = new Intent(this, CameraActivity.class);
         startActivity(intent);
         finish();
     }
 
+    private boolean allPermissionsGranted() {
+        for (String permission : permissions) {
+            if (ContextCompat.checkSelfPermission(this, permission)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return false;
+            }
+        }
+        return true;
+    }
 }

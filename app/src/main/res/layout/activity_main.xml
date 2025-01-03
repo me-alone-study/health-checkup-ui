@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout
+    android:id="@+id/root_layout"
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="#000000">
@@ -20,34 +20,71 @@
             android:id="@+id/texture_view"
             android:layout_width="match_parent"
             android:layout_height="0dp"
+            app:layout_constraintDimensionRatio="16:9"
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@id/button_container" />
 
-        <!-- 底部按钮控制区 -->
+        <!-- 录制指示器 -->
+        <FrameLayout
+            android:id="@+id/recording_indicator"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_margin="16dp"
+            android:background="#80000000"
+            android:padding="8dp"
+            android:visibility="gone"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <View
+                    android:id="@+id/recording_dot"
+                    android:layout_width="12dp"
+                    android:layout_height="12dp"
+                    android:background="@drawable/recording_dot_background"
+                    android:layout_marginEnd="8dp"/>
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="正在录制"
+                    android:textColor="#FFFFFF"
+                    android:textSize="14sp"/>
+            </LinearLayout>
+        </FrameLayout>
+
+        <!-- 底部按钮区域 -->
         <LinearLayout
             android:id="@+id/button_container"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="#80000000"
             android:orientation="horizontal"
-            android:padding="16dp"
+            android:padding="@dimen/padding_normal"
+            style="@style/ButtonContainer"
+            android:minHeight="@dimen/button_height"
+            android:background="#80000000"
             app:layout_constraintBottom_toBottomOf="parent">
 
             <Button
                 android:id="@+id/btn_start"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginEnd="8dp"
                 android:layout_weight="1"
-                android:text="开始测量" />
+                android:text="开始测量"
+                android:layout_marginEnd="8dp"/>
 
             <Button
                 android:id="@+id/btn_stop"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:layout_marginStart="8dp"
                 android:layout_weight="1"
-                android:text="停止测量" />
+                android:text="停止测量"
+                android:layout_marginStart="8dp"/>
         </LinearLayout>
     </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -57,112 +94,182 @@
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_margin="8dp"
-        app:cardBackgroundColor="#80000000"
         app:cardCornerRadius="8dp"
+        app:cardBackgroundColor="#80000000"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@id/camera_container"
-        app:layout_constraintWidth_percent="0.3">
+        app:layout_constraintWidth_percent="0.3"
+        app:layout_constraintWidth_min="200dp">
 
-        <LinearLayout
+        <ScrollView
             android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_height="match_parent">
 
-            <!-- 血氧饱和度显示 -->
-            <TextView
+            <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="血氧饱和度(SpO2)："
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
-            <TextView
-                android:id="@+id/tv_spo2"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="待测量..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                <!-- 基本信息组 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="基本信息"
+                    android:textColor="#4CAF50"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
 
-            <!-- 年龄显示 -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="预测年龄："
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                <!-- 性别和年龄 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal"
+                    android:layout_marginBottom="16dp">
 
-            <TextView
-                android:id="@+id/tv_age"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="待测量..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-            <!-- 性别显示 -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="预测性别："
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="性别"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"/>
 
-            <TextView
-                android:id="@+id/tv_gender"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="待测量..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                        <TextView
+                            android:id="@+id/tv_gender"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="待测量..."
+                            android:textColor="#03A9F4"
+                            android:textSize="16sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
 
-            <!-- 血压显示 -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="血压水平："
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-            <TextView
-                android:id="@+id/tv_blood_pressure"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="待测量..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="年龄"
+                            android:textColor="#FFFFFF"
+                            android:textSize="14sp"/>
 
-            <!-- 呼吸率显示 -->
-            <TextView
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:text="呼吸率："
-                android:textColor="#FFFFFF"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                        <TextView
+                            android:id="@+id/tv_age"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="待测量..."
+                            android:textColor="#03A9F4"
+                            android:textSize="16sp"
+                            android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
 
-            <TextView
-                android:id="@+id/tv_respiratory"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="4dp"
-                android:text="待测量..."
-                android:textColor="#FFFFFF"
-                android:textSize="14sp" />
-        </LinearLayout>
+                <!-- 健康指标组 -->
+                <TextView
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:text="健康指标"
+                    android:textColor="#4CAF50"
+                    android:textSize="18sp"
+                    android:textStyle="bold"
+                    android:layout_marginBottom="8dp"/>
+
+                <!-- 血氧饱和度 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="@dimen/margin_normal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="血氧饱和度 (SpO₂)"
+                        style="@style/LabelText"/>
+
+                    <TextView
+                        android:id="@+id/tv_spo2"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="待测量..."
+                        style="@style/ValueText"/>
+                </LinearLayout>
+
+                <!-- 血压 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="@dimen/margin_normal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="血压"
+                        style="@style/LabelText"/>
+
+                    <TextView
+                        android:id="@+id/tv_blood_pressure"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="待测量..."
+                        style="@style/ValueText"/>
+                </LinearLayout>
+
+                <!-- 心率 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:layout_marginBottom="@dimen/margin_normal">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="心率"
+                        style="@style/LabelText"/>
+
+                    <TextView
+                        android:id="@+id/tv_heart_rate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="待测量..."
+                        style="@style/ValueText"/>
+                </LinearLayout>
+
+                <!-- 呼吸率 -->
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="呼吸率"
+                        style="@style/LabelText"/>
+
+                    <TextView
+                        android:id="@+id/tv_respiratory"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="待测量..."
+                        style="@style/ValueText"/>
+                </LinearLayout>
+            </LinearLayout>
+        </ScrollView>
+
     </androidx.cardview.widget.CardView>
 
 </androidx.constraintlayout.widget.ConstraintLayout>
